@@ -3,9 +3,10 @@ module main.go
 go 1.12
 
 //replace github.com/nanoscopic/controlfloor_auth => ../controlfloor_auth
-replace github.com/nanoscopic/controlfloor_auth_admin => ../controlfloor_auth_none_b
+replace github.com/nanoscopic/controlfloor_auth_admin => github.com/LambdaTest/controlfloor_auth_none_private v1.1.0
 replace github.com/nanoscopic/controlfloor/docs => ./docs
-replace github.com/nanoscopic/controlfloor_auth => /Users/ltadmin/Documents/ios_control_floor/controlfloor_auth_none
+replace github.com/nanoscopic/controlfloor_auth => github.com/LambdaTest/controlfloor_auth_none_private v1.1.0
+
 
 //replace github.com/nanoscopic/ujsonin/v2 => ../ujsonin/v2
 

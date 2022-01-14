@@ -81,6 +81,7 @@ func (self *DevHandler) registerDeviceRoutes() {
 	uAuth.GET("/device/info/json", func(c *gin.Context) { self.showDevInfoJson(c) })
 
 	uAuth.GET("/device/imgStream", func(c *gin.Context) { self.handleImgStream(c) })
+	uAuth.POST("/device/initWebrtc", func(c *gin.Context) { self.handleWebrtc(c) })
 	uAuth.GET("/device/ws", func(c *gin.Context) { self.handleDevWs(c) })
 
 	uAuth.POST("/device/launch", func(c *gin.Context) { self.handleDevLaunch(c) })
@@ -91,6 +92,7 @@ func (self *DevHandler) registerDeviceRoutes() {
 	aAuth.GET("/device/listRestrictedApps", func(c *gin.Context) { self.handleDevListRestrictedApps(c) })
 
 	uAuth.GET("/device/video", self.showDevVideo)
+	uAuth.GET("/device/videoNew", self.showDevVideoNew)
 	uAuth.GET("/device/reserved", self.showDevReservedTest)
 	uAuth.GET("/device/kick", self.devKick)
 	uAuth.POST("/device/videoStop", self.stopDevVideo)
@@ -98,9 +100,11 @@ func (self *DevHandler) registerDeviceRoutes() {
 	uAuth.GET("/device/ping", self.handleDevPing)
 	uAuth.GET("/device/inspect", self.showDevInspect)
 	uAuth.GET("/device/wdaPort", self.showWdaPort)
+
 	uAuth.GET("/device/refresh", self.handleDeviceRefresh)
 	uAuth.GET("/device/restart", self.handleDeviceRestart)
 	uAuth.POST("/device/launchsafariurl", func(c *gin.Context) { self.handleSafariUrl(c) })
+	uAuth.POST("/device/cleanbrowser", func(c *gin.Context) { self.handleBrowserCleanup(c) })
 }
 
 type SRawInfo struct {
@@ -480,6 +484,12 @@ func (self *DevHandler) handleDevClick(c *gin.Context) {
 	y, _ := strconv.Atoi(c.PostForm("y"))
 	fmt.Printf("Request proto %s\n", c.Request.Proto)
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -504,6 +514,12 @@ func (self *DevHandler) handleDevDoubleclick(c *gin.Context) {
 	y, _ := strconv.Atoi(c.PostForm("y"))
 	fmt.Printf("Request proto %s\n", c.Request.Proto)
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -525,6 +541,12 @@ func (self *DevHandler) handleDevDoubleclick(c *gin.Context) {
 func (self *DevHandler) handleDevLaunch(c *gin.Context) {
 	bid := c.PostForm("bid")
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -546,6 +568,12 @@ func (self *DevHandler) handleDevLaunch(c *gin.Context) {
 func (self *DevHandler) handleDevKill(c *gin.Context) {
 	bid := c.PostForm("bid")
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -567,6 +595,12 @@ func (self *DevHandler) handleDevKill(c *gin.Context) {
 func (self *DevHandler) handleDevRestrictApp(c *gin.Context) {
 	bid := c.PostForm("bid")
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -588,6 +622,12 @@ func (self *DevHandler) handleDevRestrictApp(c *gin.Context) {
 func (self *DevHandler) handleDevAllowApp(c *gin.Context) {
 	bid := c.PostForm("bid")
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -611,6 +651,12 @@ func (self *DevHandler) handleDevMouseDown(c *gin.Context) {
 	x, _ := strconv.Atoi(c.PostForm("x"))
 	y, _ := strconv.Atoi(c.PostForm("y"))
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -634,6 +680,12 @@ func (self *DevHandler) handleDevMouseUp(c *gin.Context) {
 	x, _ := strconv.Atoi(c.PostForm("x"))
 	y, _ := strconv.Atoi(c.PostForm("y"))
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -657,6 +709,13 @@ func (self *DevHandler) handleDevHardPress(c *gin.Context) {
 	x, _ := strconv.Atoi(c.PostForm("x"))
 	y, _ := strconv.Atoi(c.PostForm("y"))
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
+
 	pc.doHardPress(udid, x, y)
 }
 
@@ -671,6 +730,12 @@ func (self *DevHandler) handleDevLongPress(c *gin.Context) {
 	time, _ := strconv.ParseFloat(c.PostForm("time"), 64)
 
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -691,6 +756,12 @@ func (self *DevHandler) handleDevLongPress(c *gin.Context) {
 func (self *DevHandler) handleDevHome(c *gin.Context) {
 	//udid := c.PostForm("udid")
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -710,6 +781,12 @@ func (self *DevHandler) handleDevHome(c *gin.Context) {
 // @Param udid formData string true "Device UDID"
 func (self *DevHandler) handleDevTaskSwitcher(c *gin.Context) {
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -729,6 +806,12 @@ func (self *DevHandler) handleDevTaskSwitcher(c *gin.Context) {
 // @Param udid formData string true "Device UDID"
 func (self *DevHandler) handleDevShake(c *gin.Context) {
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -748,6 +831,12 @@ func (self *DevHandler) handleDevShake(c *gin.Context) {
 // @Param udid formData string true "Device UDID"
 func (self *DevHandler) handleDevCC(c *gin.Context) {
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -767,6 +856,12 @@ func (self *DevHandler) handleDevCC(c *gin.Context) {
 // @Param udid formData string true "Device UDID"
 func (self *DevHandler) handleDevAssistiveTouch(c *gin.Context) {
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -796,6 +891,12 @@ func (self *DevHandler) handleDevSwipe(c *gin.Context) {
 	y2, _ := strconv.Atoi(c.PostForm("y2"))
 	delay, _ := strconv.ParseFloat(c.PostForm("delay"), 64)
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -824,6 +925,13 @@ func (self *DevHandler) handleKeys(c *gin.Context) {
 	done := make(chan bool)
 
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
+
 	pc.doKeys(udid, keys, curid, prevkeys, func(uj.JNode, []byte) {
 		done <- true
 	})
@@ -845,6 +953,13 @@ func (self *DevHandler) handleText(c *gin.Context) {
 	done := make(chan bool)
 
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
+
 	pc.doText(udid, text, func(uj.JNode, []byte) {
 		done <- true
 	})
@@ -856,11 +971,40 @@ func (self *DevHandler) handleText(c *gin.Context) {
 	})
 }
 
+func (self *DevHandler) handleWebrtc(c *gin.Context) {
+	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
+
+	offer := c.PostForm("offer")
+
+	done := make(chan bool)
+
+	pc.initWebrtc(udid, offer, func(_ uj.JNode, raw []byte) {
+		c.Writer.Header().Set("Content-Type", "text/json; charset=utf-8")
+		c.Writer.WriteHeader(200)
+		c.Writer.Write(raw)
+		done <- true
+	})
+
+	<-done
+}
+
 // @Summary Device - Get device source
 // @Router /device/source [GET]
 // @Param udid formData string true "Device UDID"
 func (self *DevHandler) handleSource(c *gin.Context) {
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -879,6 +1023,12 @@ func (self *DevHandler) handleSource(c *gin.Context) {
 // @Param udid formData string true "Device UDID"
 func (self *DevHandler) handleDevListRestrictedApps(c *gin.Context) {
 	pc, udid := self.getPcGET(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	done := make(chan bool)
 
@@ -897,6 +1047,12 @@ func (self *DevHandler) handleDevListRestrictedApps(c *gin.Context) {
 // @Param udid formData string true "Device UDID"
 func (self *DevHandler) handleShutdown(c *gin.Context) {
 	pc, udid := self.getPc(c)
+	if pc == nil {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "nok",
+		})
+		return
+	}
 
 	pc.doShutdown(func(_ uj.JNode, raw []byte) {})
 	self.devTracker.clearDevProv(udid)
@@ -1033,6 +1189,71 @@ func (self *DevHandler) showDevVideo(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "devVideo", gin.H{
+		"udid":        udid,
+		"clickWidth":  dev.ClickWidth,
+		"clickHeight": dev.ClickHeight,
+		"vidWidth":    dev.Width,
+		"vidHeight":   dev.Height,
+		"rid":         rid,
+		"idleTimeout": self.devTracker.config.idleTimeout,
+		"maxHeight":   self.config.maxHeight,
+		"deviceVideo": self.config.text.deviceVideo,
+		"info":        info,
+		"rawInfo":     rawInfo,
+		"notes":       notesText,
+	})
+}
+
+// @Summary Device - New Video Page
+// @Router /device/videoNew [GET]
+// @Param udid query string true "Device UDID"
+func (self *DevHandler) showDevVideoNew(c *gin.Context) {
+	udid, uok := c.GetQuery("udid")
+	if !uok {
+		c.HTML(http.StatusOK, "error", gin.H{
+			"text": "no uuid set",
+		})
+		return
+	}
+
+	dev := getDevice(udid)
+
+	sCtx := self.sessionManager.GetSession(c)
+	user := self.sessionManager.session.Get(sCtx, "user").(string)
+	fmt.Printf("Reserving device %s for %s\n", udid, user)
+	rid := RandStringBytes(10)
+	success := addReservation(udid, user, rid)
+
+	if !success {
+		rv := getReservation(udid)
+
+		if rv.User != user {
+			c.HTML(http.StatusOK, "devReserved", gin.H{
+				"udid": udid,
+				"user": rv.User,
+			})
+			return
+		}
+		fmt.Printf("Renewing reservation\n")
+		deleteReservation(udid)
+		addReservation(udid, user, rid)
+	}
+
+	rawInfo := dev.JsonInfo
+	info := "{}"
+	if rawInfo != "" {
+		var obj map[string]interface{}
+		json.Unmarshal([]byte(rawInfo), &obj)
+		infoBytes, _ := json.MarshalIndent(obj, "<br>", " &nbsp; &nbsp; &nbsp; ")
+		info = string(infoBytes)
+	}
+
+	notesText := "{}"
+	if self.config.notes != nil {
+		notesText = self.config.notes.JsonSave()
+	}
+
+	c.HTML(http.StatusOK, "devVideoNew", gin.H{
 		"udid":        udid,
 		"clickWidth":  dev.ClickWidth,
 		"clickHeight": dev.ClickHeight,
